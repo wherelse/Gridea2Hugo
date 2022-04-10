@@ -34,6 +34,7 @@ FeatureImgurl = '/post-images/'  # 封面图片路径
 
 ## 使用注意
 1. 因为需要将标题转换至文件名，所以文件名中不能包含特殊字符，如`.`、`:`等，否则会导致脚本出错。
+2. 使用`slug`作为链接地址时，需要配置`Permalinks`为`/:slug`形式。
 
 ## Hugo goldmark 配置
 在Gridea中，md文件在一行的结尾插入一个回车就会默认换行，而在Hugo中，默认情况下并不会换行，而是需要插入两个空格才会换行，但是可以通过goldmark配置文件进行修改，在`config.toml`中的`[markup]`中的`[markup.goldmark.renderer]`选项中添加如下内容：
@@ -43,6 +44,27 @@ FeatureImgurl = '/post-images/'  # 封面图片路径
     [markup.goldmark.renderer]
       hardWraps = true #是否使用回车换行
 ```
+
+## Hugo图片存储路径处理
+如果将图片存储在static文件夹下，在我们编辑文章时，应该使用`../../static/post-images/xxx.jpg`这样的路径，这样编辑器才能正常读取到图片，但是hugo在渲染html时，会将static文件夹下的内容直接输出到根目录中，这样在渲染输出的文件中，正确的图片引用方式为`/post-images/xxx.jpg`。
+
+同时匹配写作编辑器和渲染输出的最佳方式是通过hugo的正则替换，在渲染输出时，将`../../static/post-images/xxx.jpg`替换为`/post-images/xxx.jpg`即可。
+
+具体步骤为按照如下路径创建模板：`layouts/_default/_markup/render-image.html`，在文件内添加内容：
+```html
+{{ if in .Destination "/static/" }}
+<!-- 12 is count of ../../static carachers -->
+{{ $new_file_path := substr .Destination 12 }}
+<!-- just for testing, you can delete this pre tag -->
+<pre>{{ $new_file_path }}</pre>
+<!-- render the image with new path -->
+<img class="img-fluid" src="{{ $new_file_path }}" alt='{{ .Text }}' />
+{{ else }}
+<img class="img-fluid" src="{{ .Destination }}" alt='{{ .Text }}' />
+{{ end }}
+```
+该方法参考：[Writing using Typora on Hugo Based Blog](https://medium.com/@ardianta/writing-using-typora-on-hugo-based-blog-a1be8500774a)
+
 ## Hugo Latex公式渲染问题解决方案
 Hugo 默认使用的goldmark渲染器在渲染latex公式时，会错误的处理`_`和`\\`，导致文章中的latex公式渲染出错，官方现在给出的解决方案主要是使用`{{<math>}}`shortcode包裹latex，或者使用`\\\\`来代替`\\`，这两个解决方案都不完美，都无法兼容其他的markdown编辑器。
 
